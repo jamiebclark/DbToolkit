@@ -1,12 +1,12 @@
 <?php
 $config['DbToolkit'] = array(
 	'global' => array(
-		'sources' => array('default', 'shop'),
+		'sources' => array('default'),
 		'ftp' => array(
 			'directory' => '/MySQL/',
-			'server' => 'server.souperbowl.org',
-			'userName' => 'mysql_backup',
-			'password' => 'soupBow1',
+			'server' => '',
+			'userName' => '',
+			'password' => '',
 			'ascii' => false,
 			'port' => 21,
 		),

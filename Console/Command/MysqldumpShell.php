@@ -1,9 +1,10 @@
 <?php
 App::uses('ConnectionManager', 'Model');
 App::uses('AppShell', 'Console/Command');
+App::import('Utilities', 'DbToolkit.PluginConfig');
 App::import('Vendor', 'DbToolkit.Mysqldump');
 
-Configure::load('DbToolkit.db_toolkit');
+PluginConfig::init('DbToolkit');
 
 class MysqldumpShell extends AppShell {
 
@@ -58,9 +59,12 @@ class MysqldumpShell extends AppShell {
 		
 		$ftp = $config['ftp'];
 		$ftp['directory'] .= !empty($this->args[0]) ? trim($this->args[0]) : 'nightly';
+
+		//Makes sure the sources are unique
+		$sources = array_keys(array_flip($config['sources']));
 		
 		$dataSources = ConnectionManager::enumConnectionObjects();
-		foreach ($config['sources'] as $dataSource) {
+		foreach ($sources as $dataSource) {
 			$this->out($dataSource);
 
 			if (empty($dataSources[$dataSource])) {
