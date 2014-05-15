@@ -41,8 +41,7 @@ class PluginConfig {
 			Configure::load($pluginUnderscore);
 			Set::merge($config, (array)Configure::read($plugin));
 		}
-		debug((array)Configure::read($plugin));
-		debug($config);
+		$config = (array)Configure::read($plugin);
 		return $config;
 	}
 }
