@@ -37,7 +37,12 @@ class Ftp extends DirInfo {
 			$this->log('Successfully connected to server: ' . $server);
 			$this->loginOptions = $loginOptions;
 		} else {
-			$this->log('Could not connect to server: ' . $server);
+			$msg = 'Could not connect to server: ' . $server;
+			foreach ($this->loginOptions as $key => $val) {
+				$msg .= sprintf('`%s`: `%s`; ', $key, $val);
+			}
+			$this->log($msg);
+			throw new Exception($msg);
 		}
 		return $this->connId;
 	}
