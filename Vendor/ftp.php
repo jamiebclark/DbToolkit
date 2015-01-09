@@ -148,8 +148,6 @@ class Ftp extends DirInfo {
 		$ret = ftp_nb_put($this->connId, $target, $source, $mode);
 
 		$startTime = microtime(true);
-		sleep(1000)
-		
 		while($ret == FTP_MOREDATA) {
 			clearstatcache();
 			$bytes = $Ftp2->getFileSize($target);
