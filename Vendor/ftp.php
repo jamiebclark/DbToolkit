@@ -144,7 +144,12 @@ class Ftp extends DirInfo {
 			$bytes = $Ftp2->getFileSize($target);
 
 			if (!empty($oBytes) && $oBytes != $bytes) {
-				$this->log("Bytes: $bytes out of $total");
+				$this->log(sprintf(
+					'%03d%%: %s out of %s bytes', 
+					round($bytes / $total * 100),
+					number_format($bytes), 
+					number_format($total),
+					);
 			}
 			
 			if ($bytes > 0) {
