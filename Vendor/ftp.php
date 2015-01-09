@@ -128,7 +128,15 @@ class Ftp extends DirInfo {
 		}
 	}
 	
-	//Uploads a file, tracking percentage
+	private function _timeFormat($secs) {
+		$hours = floor($secs / 3600);
+		$secs -= $hours * 3600;
+		$minutes = floor($secs / 60);
+		$secs -= $minutes * 60;
+		return sprintf('%02d:%02d:%02d', $hours, $minutes, $secs);
+	}
+
+	// Uploads a file, tracking percentage
 	function uploadPct($source, $target, $mode, $options = array()) {
 		$total = filesize($source);
 		$lastPct = 0;
@@ -138,18 +146,25 @@ class Ftp extends DirInfo {
 		
 		$Ftp2 = new Ftp($this->loginOptions);
 		$ret = ftp_nb_put($this->connId, $target, $source, $mode);
+
+		$startTime = microtime(true);
 		
 		while($ret == FTP_MOREDATA) {
 			clearstatcache();
 			$bytes = $Ftp2->getFileSize($target);
 
 			if (!empty($oBytes) && $oBytes != $bytes) {
+				$time = microtime(true);
+				$timeRemains = $time * $total / $bytes - $time;
+
 				$this->log(sprintf(
-					'%03d%%: %s out of %s bytes', 
+					'%s %03d%%: %s of %s bytes. %s remains', 
+					$this->_timeFormat($time),
 					round($bytes / $total * 100),
 					number_format($bytes), 
 					number_format($total),
-					);
+					$this->_timeFormat($timeRemains)
+				));
 			}
 			
 			if ($bytes > 0) {
