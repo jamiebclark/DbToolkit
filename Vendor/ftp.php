@@ -139,6 +139,9 @@ class Ftp extends DirInfo {
 	// Uploads a file, tracking percentage
 	function uploadPct($source, $target, $mode, $options = array()) {
 		$total = filesize($source);
+		$totalFormat = number_format($total);
+		$totalFormatLength = strlen($totalFormat);
+
 		$lastPct = 0;
 		$multiple = 5;
 		
@@ -157,11 +160,11 @@ class Ftp extends DirInfo {
 				$timeRemains = $time * $total / $bytes - $time;
 
 				$this->log(sprintf(
-					'%s %3d%%: %s of %s bytes. %s remains', 
+					'%s %3d%%: %' . $totalFormatLength . 's of %' . $totalFormatLength . 's bytes. %s remains', 
 					$this->_timeFormat($time),
 					round($bytes / $total * 100),
 					number_format($bytes), 
-					number_format($total),
+					$totalFormat,
 					$this->_timeFormat($timeRemains)
 				));
 			}
