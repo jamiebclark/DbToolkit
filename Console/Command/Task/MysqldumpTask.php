@@ -1,8 +1,8 @@
 <?php
-App::uses('ConnectionManager', 'Model');
 App::uses('AppShell', 'Console/Command');
-App::import('Utilities', 'DbToolkit.PluginConfig');
-App::import('Vendor', 'DbToolkit.Mysqldump');
+App::uses('PluginConfig', 'DbToolkit.Utility');
+App::uses('MysqlDump', 'DbToolkit.Utility');
+App::uses('DataSource', 'DbToolkit.Utility');
 
 PluginConfig::init('DbToolkit');
 
@@ -67,7 +67,7 @@ class MysqldumpTask extends AppShell {
 		//Makes sure the sources are unique
 		$sources = array_keys(array_flip($config['sources']));
 		
-		$dataSources = ConnectionManager::enumConnectionObjects();
+		$dataSources = DataSource::getSources();
 		foreach ($sources as $dataSource) {
 			$this->out($dataSource);
 
@@ -76,10 +76,10 @@ class MysqldumpTask extends AppShell {
 				continue;
 			}
 			$dbConfig = $dataSources[$dataSource];
-			if (!empty($Mysqldump)) {
-				unset($Mysqldump);
+			if (!empty($MysqlDump)) {
+				unset($MysqlDump);
 			}
-			$Mysqldump = new Mysqldump(
+			$MysqlDump = new MysqlDump(
 				$dbConfig['host'], 
 				$dbConfig['login'], 
 				$dbConfig['password'], 
@@ -89,19 +89,19 @@ class MysqldumpTask extends AppShell {
 			);
 			
 			if ($schema) {
-				$Mysqldump->getSchema = true;
+				$MysqlDump->getSchema = true;
 			}
 
 			$this->hr();
 			
 			$this->out("Connected to database {$dbConfig['database']}");
 			$this->hr();
-			$Mysqldump->run();
+			$MysqlDump->run();
 			$this->hr();
 			$this->out("Completed mysqldump. Uploading to:{$ftp['server']}");
 			$this->hr();
 			
-			$Mysqldump->ftpUpload($ftp['directory'], $ftp['server'], $ftp['userName'], $ftp['password'], $ftp);
+			$MysqlDump->ftpUpload($ftp['directory'], $ftp['server'], $ftp['userName'], $ftp['password'], $ftp);
 			$this->out("Finished uploading");
 		}
 		$this->out("Finished MySQL Dump Backup");

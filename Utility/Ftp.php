@@ -1,5 +1,6 @@
 <?php
-require_once 'dir_info.php';
+//require_once 'dir_info.php';
+App::uses('DirInfo', 'DbToolkit.Utility');
 
 class Ftp extends DirInfo {
 	

@@ -1,5 +1,6 @@
 <?php
-require_once "log_file.php";
+//require_once "log_file.php";
+App::uses('LogFile', 'DbToolkit.Utility');
 class DirInfo {
 	var $ds = '/';
 	

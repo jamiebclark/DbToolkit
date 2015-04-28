@@ -2,6 +2,7 @@
 $config['DbToolkit'] = array(
 	'global' => array(
 		'sources' => array('default'),
+		'isWindows' => false,
 		'ftp' => array(
 			'directory' => '/MySQL/',
 			'server' => '',

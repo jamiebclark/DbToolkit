@@ -1,8 +1,10 @@
 <?php
-require_once dirname(__FILE__) . DS . "ftp.php";
-require_once dirname(__FILE__) . DS . "log_file.php";
+//require_once dirname(__FILE__) . DS . "ftp.php";
+//require_once dirname(__FILE__) . DS . "log_file.php";
+App::uses('Ftp', 'DbToolkit.Utility');
+App::uses('LogFile', 'DbToolkit.Utility');
 
-class Mysqldump {
+class MysqlDump {
 	//Settings
 	public $gzip = true;
 	public $schema = false;
@@ -94,13 +96,13 @@ class Mysqldump {
 	//Runs the MySQL dump command
 	public function run($mysqlHost = null, $mysqlUser = null, $mysqlPass = null, $mysqlDb = null) {
 		$this->log('Beginning MySQL Dump', 'COMPLETE');
-		//Makes sure we're connected to MySQL
+		// Makes sure we're connected to MySQL
 		$this->setMysqlLogin($mysqlHost, $mysqlUser, $mysqlPass, $mysqlDb);
 		
 		$cmd = $this->getMysqlDumpCmd();
 		$this->log($cmd);
 		
-		//Executes dump command
+		// Executes dump command
 		$this->log('Executing MySQL Dump');
 		$cmds = explode(';', $cmd);
 		foreach ($cmds as $cmd) {
@@ -116,6 +118,41 @@ class Mysqldump {
 		return $success;
 	}
 	
+	public function restore($dumpFile, $mysqlHost = null, $mysqlUser = null, $mysqlPass = null, $mysqlDb = null) {
+		$isZipped = substr($dumpFile, -2) == 'gz';
+		$this->setMysqlLogin($mysqlHost, $mysqlUser, $mysqlPass, $mysqlDb);
+
+		$this->log('Beginning MySQL Dump Restore', 'COMPLETE');
+
+		$mysqlCmd = sprintf('%s -u %s %s %s',
+			$this->getProgram('mysql'),
+			$this->_mysql['user'],
+			!empty($this->_mysql['pass']) ? '-p' . $this->_mysql['pass'] : '',
+			$this->_mysql['db']
+		);
+
+		if ($isZipped) {
+			$cmd = sprintf('%s -dc "%s" |%s', 
+				$this->getProgram('gzip'), 
+				$dumpFile,
+				$mysqlCmd
+			);
+		} else {
+			$cmd = "$mysqlCmd < \"$dumpFile\"";
+		}
+		$success = exec($cmd);
+		$this->log('MySQL Restore Completed', 'COMPLETE');
+		return $success;
+	}
+
+	public function getLastFile($glob) {
+		//$glob = $this->dumpDir . '*' . $sourceName . '*';
+		$files = glob($glob);
+		$files = array_combine($files, array_map("filemtime", $files));
+		arsort($files);
+		return key($files);
+	}
+
 	function getMysqlDumpCmd() {
 		if (!empty($this->_mysqlDumpCmd)) {
 			$cmd = $this->_mysqlDumpCmd;
@@ -125,25 +162,38 @@ class Mysqldump {
 		return $cmd;
 	}
 	
+	function getProgram($program) {
+		$mysqlWindowsDir = 'J:\wamp\bin\mysql\mysql5.6.17\bin\\';
+		$gzipWindowsDir = 'J:\Program Files (x86)\GnuWin32\bin\\';
+		$windowsSuffix = '.exe';
+
+		switch ($program) {
+			case 'mysqldump':
+			case 'mysql';
+				$windowsPrefix = $mysqlWindowsDir;
+				break;
+			case 'tar':
+			case 'gzip':
+				$windowsPrefix = $gzipWindowsDir;
+				break;
+		}
+		if ($this->isWindows) {
+			$program = $windowsPrefix . $program . $windowsSuffix;
+			if (strpos($program, ' ') !== false) {
+				$program = '"' . $program . '"';
+			}
+		}
+		return $program;
+	}
+
 	function setMysqlDumpCmd() {
 		$dumpFile = $this->getDumpFile();
 		$split = false;
 		
 		$format = $dumpFile['format'];
 		
-		
 		//Generates the dump command
-		if ($this->isWindows) {
-			$mysqldump = 'C:\wamp\bin\mysql\mysql5.6.12\bin\mysqldump.exe';
-			$gzip = '"C:\Program Files\Gzip\gzip.exe"';
-			$tar = '"C:\Program Files (x86)\GnuWin32\bin\tar.exe"';
-		} else {
-			$mysqldump = 'mysqldump';
-			$gzip = 'gzip';
-			$tar = 'tar';
-		}		
-		
-		$cmd = $mysqldump;
+		$cmd = $this->getProgram('mysqldump');
 		
 		$vars = array(
 			'user' => '-u ',
@@ -173,11 +223,12 @@ class Mysqldump {
 			if ($this->gzip) {
 				//$cmd .= ";$gzip {$dumpFile['path']} {$dumpFile['name']};";
 				//$cmd .= " | $gzip ";
-				$cmd .= ";$tar -zcvf {$dumpFile['full']}.tar.gz $newDir";
+				$cmd .= ';' . $this->getProgram('tar');
+				$cmd .= " -zcvf {$dumpFile['full']}.tar.gz $newDir";
 			}
 		} else {		
 			if ($this->gzip) {
-				$cmd .= " | $gzip ";
+				$cmd .= " | " . $this->getProgram('gzip');
 			}
 			$cmd .= ' > ' . $dumpFile['full'];
 		}

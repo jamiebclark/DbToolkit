@@ -1,8 +1,9 @@
 <?php
-App::uses('ConnectionManager', 'Model');
+
 App::uses('AppShell', 'Console/Command');
-App::import('Utilities', 'DbToolkit.PluginConfig');
-App::import('Vendor', 'DbToolkit.Mysqldump');
+App::uses('PluginConfig', 'DbToolkit.Utility');
+App::uses('MysqlDump', 'DbToolkit.Utility');
+App::uses('DataSource', 'DbToolkit.Utility');
 
 PluginConfig::init('DbToolkit');
 
@@ -24,6 +25,23 @@ class MysqldumpShell extends AppShell {
 			}
 		}
 		return $config;
+	}
+
+	// Restores a dump
+	public function restore() {
+		$config = $this->getConfig('backup');
+		$dbSourceName = $this->args[0];
+		$MysqlDump = $this->getMysqlDumpFromSource($dbSourceName);
+
+		if (!empty($this->args[1])) {
+			$file = $this->args[1];
+		} else {
+			$file = $MysqlDump->getLastFile($config['ftp']['directory'] . 'nightly' . DS . '*' . $dbSourceName . '*');
+		}
+		$this->out(sprintf('Restoring Database Config: %s from file: %s', $dbSourceName, $file));
+		$MysqlDump->restore($file);
+		
+		$this->out('Completed Restoring');
 	}
 	
 	//Backs up both schema and data
@@ -60,46 +78,50 @@ class MysqldumpShell extends AppShell {
 		$ftp = $config['ftp'];
 		$ftp['directory'] .= !empty($this->args[0]) ? trim($this->args[0]) : 'nightly';
 
-		//Makes sure the sources are unique
+		// Makes sure the sources are unique
 		$sources = array_keys(array_flip($config['sources']));
 		
-		$dataSources = ConnectionManager::enumConnectionObjects();
 		foreach ($sources as $dataSource) {
-			$this->out($dataSource);
-
-			if (empty($dataSources[$dataSource])) {
+			$this->out("Dumping from Datasource: $dataSource");
+			if (!DataSource::exists($dataSource)) {
 				$this->out("Datasource not found: $dataSource");
 				continue;
 			}
-			$dbConfig = $dataSources[$dataSource];
-			if (!empty($Mysqldump)) {
-				unset($Mysqldump);
-			}
-			$Mysqldump = new Mysqldump(
-				$dbConfig['host'], 
-				$dbConfig['login'], 
-				$dbConfig['password'], 
-				$dbConfig['database'], 
-				null, 
-				$this
-			);
+			$dbConfig = DataSource::get($dataSource);
+			$MysqlDump = null;
+			$MysqlDump = $this->getMysqlDumpFromSource($dataSource);
 			
 			if ($schema) {
-				$Mysqldump->getSchema = true;
+				$MysqlDump->getSchema = true;
 			}
 
 			$this->hr();
 			
 			$this->out("Connected to database {$dbConfig['database']}");
 			$this->hr();
-			$Mysqldump->run();
+			$MysqlDump->run();
 			$this->hr();
 			$this->out("Completed mysqldump. Uploading to:{$ftp['server']}");
 			$this->hr();
 			
-			$Mysqldump->ftpUpload($ftp['directory'], $ftp['server'], $ftp['userName'], $ftp['password'], $ftp);
+			$MysqlDump->ftpUpload($ftp['directory'], $ftp['server'], $ftp['userName'], $ftp['password'], $ftp);
 			$this->out("Finished uploading");
 		}
 		$this->out("Finished MySQL Dump Backup");
+	}
+
+	protected function getMysqlDumpFromSource($dbSourceName) {
+		$dbSource = DataSource::get($dbSourceName);
+		if (empty($dbSource)) {
+			throw new Exception('Could not find datasource: ' . $dbSourceName);
+		}
+		return new MysqlDump(
+			$dbSource['host'], 
+			$dbSource['login'], 
+			$dbSource['password'], 
+			$dbSource['database'], 
+			null, 
+			$this
+		);
 	}
 }
